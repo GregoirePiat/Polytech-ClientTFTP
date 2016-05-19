@@ -38,8 +38,8 @@ public class Client{
     private InetAddress inetAddress = null;
     private byte[] requestByteArray;
     private byte[] bufferByteArray;
-    private DatagramPacket outBoundDatagramPacket;
-    private DatagramPacket inBoundDatagramPacket;
+    private DatagramPacket sendDatagramPacket;
+    private DatagramPacket receiveDatagramPacket;
 
 
     public Client() throws IOException{
@@ -51,38 +51,14 @@ public class Client{
     }
 
     private void load(String fileName) throws IOException {
-
-        // STEP0: prepare for communication
         inetAddress = InetAddress.getByName(TFTP_SERVER_IP);
         datagramSocket = new DatagramSocket();
         requestByteArray = createRequest(OP_RRQ, fileName, "octet");
-        outBoundDatagramPacket = new DatagramPacket(requestByteArray,
+        sendDatagramPacket = new DatagramPacket(requestByteArray,
                 requestByteArray.length, inetAddress, TFTP_DEFAULT_PORT);
-
-        // STEP 1: sending request RRQ to TFTP server fo a file
-        datagramSocket.send(outBoundDatagramPacket);
-
-        // STEP 2: receive file from TFTP server
+        datagramSocket.send(sendDatagramPacket);
         ByteArrayOutputStream byteOutOS = receiveFile();
-
-        // STEP 3: write file to local disc
         writeFile(byteOutOS, fileName);
-    }
-
-    private void writeFile(ByteArrayOutputStream baoStream, String fileName) {
-        try {
-            OutputStream outputStream = new FileOutputStream(fileName);
-            baoStream.writeTo(outputStream);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private boolean isLastPacket(DatagramPacket datagramPacket) {
-        if (datagramPacket.getLength() < 512)
-            return true;
-        else
-            return false;
     }
 
     private byte[] createRequest(final byte opCode, final String fileName,
@@ -109,47 +85,13 @@ public class Client{
         rrqByteArray[position] = zeroByte;
         return rrqByteArray;
     }
-
-    private ByteArrayOutputStream receiveFile() throws IOException {
-        ByteArrayOutputStream byteOutOS = new ByteArrayOutputStream();
-        int block = 1;
-        do {
-            System.out.println("TFTP Packet count: " + block);
-            block++;
-            bufferByteArray = new byte[PACKET_SIZE];
-            inBoundDatagramPacket = new DatagramPacket(bufferByteArray,
-                    bufferByteArray.length, inetAddress,
-                    datagramSocket.getLocalPort());
-
-            //STEP 2.1: receive packet from TFTP server
-            datagramSocket.receive(inBoundDatagramPacket);
-
-            // Getting the first 4 characters from the TFTP packet
-            byte[] opCode = { bufferByteArray[0], bufferByteArray[1] };
-
-            if (opCode[1] == OP_ERROR) {
-                reportError();
-            } else if (opCode[1] == OP_DATA) {
-                // Check for the TFTP packets block number
-                byte[] blockNumber = { bufferByteArray[2], bufferByteArray[3] };
-
-                DataOutputStream dos = new DataOutputStream(byteOutOS);
-                dos.write(inBoundDatagramPacket.getData(), 4,
-                        inBoundDatagramPacket.getLength() - 4);
-
-                //STEP 2.2: send ACK to TFTP server for received packet
-                sendAck(blockNumber);
-
-        } while (!isLastPacket(inBoundDatagramPacket));
-        return byteOutOS;
-    }
     
     public void sendAck(byte[] blockNumber) {
         
         byte[] ACK = { 0, OP_ACK, blockNumber[0], blockNumber[1] };
         
         DatagramPacket dpAck = new DatagramPacket(ACK, ACK.length, inetAddress,
-                        inBoundDatagramPacket.getPort());
+                receiveDatagramPacket.getPort());
         try {
             datagramSocket.send(dpAck);
         } catch (IOException e) {
@@ -157,26 +99,4 @@ public class Client{
         }
     }
 
-    private void sendAck(byte[] blockNumber) {
-
-        byte[] ACK = { 0, OP_ACK, blockNumber[0], blockNumber[1] };
-
-        // TFTP Server communicates back on a new PORT
-        // so get that PORT from in bound packet and
-        // send acknowledgment to it
-        DatagramPacket ack = new DatagramPacket(ACK, ACK.length, inetAddress,
-                inBoundDatagramPacket.getPort());
-        try {
-            datagramSocket.send(ack);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void reportError() {
-        String errorCode = new String(bufferByteArray, 3, 1);
-        String errorText = new String(bufferByteArray, 4,
-                inBoundDatagramPacket.getLength() - 4);
-        System.err.println("Error: " + errorCode + " " + errorText);
-    }
 }
