@@ -1,23 +1,18 @@
-/**
- * Created by GregoirePiat on 19/05/16.
- */
-
 /*
  * To change this license header, choose License Headers in Project Properties.
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
+import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
+
+import java.io.*;
 import java.net.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.nio.file.*;
 
 public class Client{
     private static final String TFTP_SERVER_IP = "127.0.0.1";
@@ -42,24 +37,51 @@ public class Client{
     private DatagramPacket receiveDatagramPacket;
 
 
-    public Client() throws IOException{
+    public Client(){
 
-        String fileName = "";
-        Client client = new Client();
-        client.load(fileName);
+        try{
+            String file = "/Users/GregoirePiat/Documents/yolo.rtf";
+            openFile(file);
+        }
+        catch (Exception exce){
+            exce.printStackTrace();
+        }
+
+
 
     }
 
-    private void load(String fileName) throws IOException {
-        inetAddress = InetAddress.getByName(TFTP_SERVER_IP);
-        datagramSocket = new DatagramSocket();
-        requestByteArray = createRequest(OP_RRQ, fileName, "octet");
-        sendDatagramPacket = new DatagramPacket(requestByteArray,
-                requestByteArray.length, inetAddress, TFTP_DEFAULT_PORT);
-        datagramSocket.send(sendDatagramPacket);
-        ByteArrayOutputStream byteOutOS = receiveFile();
-        writeFile(byteOutOS, fileName);
+    private static void openFile(String file) {
+        byte[] input = new byte[1000];
+        int b;
+        int i;
+        try {
+            FileInputStream fe = new FileInputStream(file);
+            for (i = 0; i < input.length; i++) {
+                b = fe.read();
+                if (b == -1) break;
+                input[i] = (byte) b;
+            }
+            System.out.println(" tableauinput : " + input[0] + " " + input[1] + " " + input[2] + " "
+                    + input[3]);
+            fe.close();
+        } catch (IOException ex) {
+            System.out.println(ex);
+        }
+        try{
+            System.out.println(new String(input,"UTF-8"));
+        }
+        catch(Exception excep){
+            excep.printStackTrace();
+        }
+
     }
+
+
+
+
+
+
 
     private byte[] createRequest(final byte opCode, final String fileName,
                                  final String mode) {
@@ -85,11 +107,11 @@ public class Client{
         rrqByteArray[position] = zeroByte;
         return rrqByteArray;
     }
-    
+
     public void sendAck(byte[] blockNumber) {
-        
+
         byte[] ACK = { 0, OP_ACK, blockNumber[0], blockNumber[1] };
-        
+
         DatagramPacket dpAck = new DatagramPacket(ACK, ACK.length, inetAddress,
                 receiveDatagramPacket.getPort());
         try {
