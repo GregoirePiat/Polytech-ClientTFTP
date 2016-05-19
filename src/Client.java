@@ -143,6 +143,19 @@ public class Client{
         } while (!isLastPacket(inBoundDatagramPacket));
         return byteOutOS;
     }
+    
+    public void sendAck(byte[] blockNumber) {
+        
+        byte[] ACK = { 0, OP_ACK, blockNumber[0], blockNumber[1] };
+        
+        DatagramPacket dpAck = new DatagramPacket(ACK, ACK.length, inetAddress,
+                        inBoundDatagramPacket.getPort());
+        try {
+            datagramSocket.send(dpAck);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     private void sendAck(byte[] blockNumber) {
 
