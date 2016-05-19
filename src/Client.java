@@ -141,10 +141,25 @@ public class Client implements Runnable{
 
                 //STEP 2.2: send ACK to TFTP server for received packet
                 sendAck(blockNumber);
-            }
 
         } while (!isLastPacket(inBoundDatagramPacket));
         return byteOutOS;
+    }
+
+    private void sendAck(byte[] blockNumber) {
+
+        byte[] ACK = { 0, OP_ACK, blockNumber[0], blockNumber[1] };
+
+        // TFTP Server communicates back on a new PORT
+        // so get that PORT from in bound packet and
+        // send acknowledgment to it
+        DatagramPacket ack = new DatagramPacket(ACK, ACK.length, inetAddress,
+                inBoundDatagramPacket.getPort());
+        try {
+            datagramSocket.send(ack);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private void reportError() {
