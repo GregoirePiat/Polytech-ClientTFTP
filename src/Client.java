@@ -37,51 +37,44 @@ public class Client{
     private DatagramPacket receiveDatagramPacket;
 
 
+
     public Client(){
 
         try{
             String file = "/Users/GregoirePiat/Documents/yolo.rtf";
-            openFile(file);
+            openFile(file, 0);
         }
         catch (Exception exce){
             exce.printStackTrace();
         }
-
-
-
     }
 
-    private static void openFile(String file) {
-        byte[] input = new byte[1000];
-        int b;
-        int i;
+    private static void openFile(String file, int offset) {
+        InputStream is;
+        byte[] partOfFile = null;
+
         try {
-            FileInputStream fe = new FileInputStream(file);
-            for (i = 0; i < input.length; i++) {
-                b = fe.read();
-                if (b == -1) break;
-                input[i] = (byte) b;
+            is = new FileInputStream(file);
+            is.read(partOfFile, offset, 512);
+            System.out.println(partOfFile.toString());
+            System.out.println("Total file size to read (in bytes) : "
+                    + is.available());
+
+            int content;
+            while ((content = is.read()) != -1) {
+                // convert to char and display it
+                System.out.print((char) content);
             }
-            System.out.println(" tableauinput : " + input[0] + " " + input[1] + " " + input[2] + " "
-                    + input[3]);
-            fe.close();
-        } catch (IOException ex) {
-            System.out.println(ex);
-        }
-        try{
-            System.out.println(new String(input,"UTF-8"));
-        }
-        catch(Exception excep){
-            excep.printStackTrace();
+
+        } catch (FileNotFoundException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
         }
 
     }
-
-
-
-
-
-
 
     private byte[] createRequest(final byte opCode, final String fileName,
                                  final String mode) {
@@ -106,6 +99,10 @@ public class Client{
         }
         rrqByteArray[position] = zeroByte;
         return rrqByteArray;
+    }
+
+    public void sendWRQ(){
+
     }
 
     public void sendAck(byte[] blockNumber) {
