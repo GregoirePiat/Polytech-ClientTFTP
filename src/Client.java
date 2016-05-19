@@ -146,43 +146,4 @@ public class Client implements Runnable{
         } while (!isLastPacket(inBoundDatagramPacket));
         return byteOutOS;
     }
-
-    @Override
-    public void run(){
-        isRunning = true;
-        while(isRunning == true){
-            start();
-        }
-    }
-
-    public void stop() {
-        isRunning = false;
-    }
-
-    public void start() {
-        dpr = new DatagramPacket(new byte[128],128);
-        try {
-            ds.receive(dpr);
-            System.out.println("udpserver.Client try - message reçu");
-            //this.stop();
-            this.print();
-        }
-        catch (IOException ex){
-            //System.err.println("Serveur - Aucune donnée reçue");
-            ex.printStackTrace();
-            System.out.println("udpserver.Client catch - message reçu");
-        }
-        //ds.close();
-    }
-
-    public void print() {
-        String message = "";
-        try {
-            message = new String(dpr.getData(), "ASCII");
-        }
-        catch(Exception e) {
-            System.err.println("Err décodage message");
-        }
-        System.out.println("message  = " + message);
-    }
 }
