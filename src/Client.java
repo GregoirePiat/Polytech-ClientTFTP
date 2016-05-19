@@ -15,7 +15,7 @@ import java.util.logging.Logger;
 
 
 public class Client implements Runnable{
-    private InetAddress adr1;
+    private InetAddress inetAddress;
     private DatagramSocket ds;
     private DatagramPacket dp;
     private DatagramPacket dpr;
@@ -31,22 +31,11 @@ public class Client implements Runnable{
         }
     }
 
-    public void connect(String ipServ) {
-        try {
-            adr1 = InetAddress.getByName(ipServ) ;
-            System.out.println(adr1);
-        }
-        catch (UnknownHostException ex){
-            System.out.println("udpserver.Client - could not find server");
-            ex.printStackTrace();
-        }
-    }
-
     public void send(String message, int servPort){
         try {
             byte[] data = message.getBytes("ASCII");
             DatagramPacket dp = new DatagramPacket(data, data.length,
-                    adr1, servPort);
+                    inetAddress, servPort);
             ds.send(dp);
             System.out.println("udpserver.Client - message envoyé");
         }
@@ -63,7 +52,7 @@ public class Client implements Runnable{
     public void run(){
         isRunning = true;
         while(isRunning == true){
-            start();
+            exec();
         }
     }
 
@@ -71,13 +60,12 @@ public class Client implements Runnable{
         isRunning = false;
     }
 
-    public void start() {
+    public void exec() {
         dpr = new DatagramPacket(new byte[128],128);
         try {
             ds.receive(dpr);
             System.out.println("udpserver.Client try - message reçu");
             //this.stop();
-            this.print();
         }
         catch (IOException ex){
             //System.err.println("Serveur - Aucune donnée reçue");
@@ -87,14 +75,17 @@ public class Client implements Runnable{
         //ds.close();
     }
 
-    public void print() {
-        String message = "";
+    public void sendAck(byte[] blockNumber) {
+        final int OP_CODE_ACK = 4;
+        
+        byte[] ACK = { 0, OP_CODE_ACK, blockNumber[0], blockNumber[1] };
+        
+        DatagramPacket dpAck = new DatagramPacket(ACK, ACK.length, inetAddress,
+                        dp.getPort());
         try {
-            message = new String(dpr.getData(), "ASCII");
+                ds.send(dpAck);
+        } catch (IOException e) {
+                e.printStackTrace();
         }
-        catch(Exception e) {
-            System.err.println("Err décodage message");
-        }
-        System.out.println("message  = " + message);
     }
 }
