@@ -140,10 +140,17 @@ public class Client implements Runnable{
                         inBoundDatagramPacket.getLength() - 4);
 
                 //STEP 2.2: send ACK to TFTP server for received packet
-                sendAcknowledgment(blockNumber);
+                sendAck(blockNumber);
             }
 
         } while (!isLastPacket(inBoundDatagramPacket));
         return byteOutOS;
+    }
+
+    private void reportError() {
+        String errorCode = new String(bufferByteArray, 3, 1);
+        String errorText = new String(bufferByteArray, 4,
+                inBoundDatagramPacket.getLength() - 4);
+        System.err.println("Error: " + errorCode + " " + errorText);
     }
 }
