@@ -19,9 +19,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 
-
-
-public class Client implements Runnable{
+public class Client{
     private static final String TFTP_SERVER_IP = "127.0.0.1";
     private static final int TFTP_DEFAULT_PORT = 69;
 
