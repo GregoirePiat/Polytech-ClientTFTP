@@ -13,11 +13,10 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.nio.file.*;
+import java.util.Arrays;
 
 public class Client{
-    private static final String TFTP_SERVER_IP = "127.0.0.1";
-    private static final int TFTP_DEFAULT_PORT = 69;
-
+    private int serverPort;
 
     // Codes informant sur les types de paquet
     private static final byte OP_RRQ = 1;
@@ -36,35 +35,83 @@ public class Client{
     private DatagramPacket sendDatagramPacket;
     private DatagramPacket receiveDatagramPacket;
 
-
-
-    public Client(){
-
-        try{
-            String file = "/Users/GregoirePiat/Documents/yolo.rtf";
-            openFile(file, 0);
+    public Client(String ip, int port){
+        try {
+            inetAddress = InetAddress.getByName(ip);
+        } catch (UnknownHostException ex) {
+            ex.printStackTrace();
         }
-        catch (Exception exce){
-            exce.printStackTrace();
+
+        this.serverPort = port;
+    }
+
+    public void prepareSendFile(String fileName) {
+
+        try {
+            openFile(fileName, 0);
+
+            datagramSocket = new DatagramSocket();
+            requestByteArray = createRequest(OP_WRQ, fileName, "octet");
+
+            sendDatagramPacket = new DatagramPacket(requestByteArray,
+                    requestByteArray.length, inetAddress, serverPort);
+
+
+            // STEP 1: sending request WRQ to TFTP server
+            datagramSocket.send(sendDatagramPacket);
+
+            // STEP 2: receive ACK from TFTP server
+            while(!waitServerResponse()) {
+
+                // STEP 3: send file to the server
+                sendFile(fileName);
+            }
+        } catch (SocketException ex) {
+            ex.printStackTrace();
+        } catch (IOException ex) {
+            ex.printStackTrace();
         }
     }
 
-    private static void openFile(String file, int offset) {
+    private boolean waitServerResponse() {
+        // prepare packet to receive
+        byte[] buffer = new byte[516];
+        DatagramPacket receivePacket = new DatagramPacket(buffer, buffer.length);
+
+        try {
+            // receive packet from TFTP server
+            datagramSocket.receive(receivePacket);
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+
+        // Getting the first 4 characters (op_code) from the TFTP packet
+        byte[] opCode = { buffer[0], buffer[1] };
+
+        if (opCode[1] == OP_ACK) {
+            return true;
+        }
+        return false;
+    }
+
+    private void sendFile(String fileName) {
+        int n = 0;
+        boolean over = false;
+
+        while(!over) {
+            openFile(fileName, n);
+            n++;
+        }
+    }
+
+    private static byte[] openFile(String file, int offset) {
         InputStream is;
-        byte[] partOfFile = null;
+        byte[] partOfFile = new byte[516];
 
         try {
             is = new FileInputStream(file);
             is.read(partOfFile, offset, 512);
-            System.out.println(partOfFile.toString());
-            System.out.println("Total file size to read (in bytes) : "
-                    + is.available());
-
-            int content;
-            while ((content = is.read()) != -1) {
-                // convert to char and display it
-                System.out.print((char) content);
-            }
+            System.out.println(Arrays.toString(partOfFile));
 
         } catch (FileNotFoundException e) {
             // TODO Auto-generated catch block
@@ -74,10 +121,10 @@ public class Client{
             e.printStackTrace();
         }
 
+        return partOfFile;
     }
 
-    private byte[] createRequest(final byte opCode, final String fileName,
-                                 final String mode) {
+    private byte[] createRequest(byte opCode, String fileName, String mode) {
         byte zeroByte = 0;
         int rrqByteLength = 2 + fileName.length() + 1 + mode.length() + 1;
         byte[] rrqByteArray = new byte[rrqByteLength];
@@ -101,12 +148,7 @@ public class Client{
         return rrqByteArray;
     }
 
-    public void sendWRQ(){
-
-    }
-
     public void sendAck(byte[] blockNumber) {
-
         byte[] ACK = { 0, OP_ACK, blockNumber[0], blockNumber[1] };
 
         DatagramPacket dpAck = new DatagramPacket(ACK, ACK.length, inetAddress,
