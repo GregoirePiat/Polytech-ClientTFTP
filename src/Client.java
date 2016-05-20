@@ -16,7 +16,8 @@ import java.nio.file.*;
 import java.util.Arrays;
 
 public class Client{
-    private int serverPort;
+
+    private static final int SERVER_PORT = 69;
 
     // Codes informant sur les types de paquet
     private static final byte OP_RRQ = 1;
@@ -35,14 +36,12 @@ public class Client{
     private DatagramPacket sendDatagramPacket;
     private DatagramPacket receiveDatagramPacket;
 
-    public Client(String ip, int port){
+    public Client(String ip){
         try {
             inetAddress = InetAddress.getByName(ip);
         } catch (UnknownHostException ex) {
             ex.printStackTrace();
         }
-
-        this.serverPort = port;
     }
 
     public void prepareSendFile(String fileName) {
@@ -54,7 +53,7 @@ public class Client{
             requestByteArray = createRequest(OP_WRQ, fileName, "octet");
 
             sendDatagramPacket = new DatagramPacket(requestByteArray,
-                    requestByteArray.length, inetAddress, serverPort);
+                    requestByteArray.length, inetAddress, SERVER_PORT);
 
 
             // STEP 1: sending request WRQ to TFTP server
