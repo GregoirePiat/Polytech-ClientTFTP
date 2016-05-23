@@ -74,9 +74,8 @@ public class Client{
                     System.out.println("Fonctionne" + receiveDatagramPacket.getData().toString());
                 }
                 else {
-
                     String message = new String(receiveDatagramPacket.getData(),"ASCII");
-                    System.out.println("Fonctionne pas ...");
+                    System.out.println("Fonctionne pas ..." + fileName);
                     System.out.println(message);
                 }
 
