@@ -3,6 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
+import com.sun.xml.internal.fastinfoset.sax.SystemIdResolver;
 import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
 
 import java.io.*;
@@ -29,6 +30,7 @@ public class Client{
 
     // Taille max des paquets
     private final static int PACKET_SIZE = 516;
+    private final static int DATA_SIZE = 512;
 
     private DatagramSocket datagramSocket = null;
     private DatagramSocket datagramSocketReception = null;
@@ -54,6 +56,10 @@ public class Client{
     public void prepareSendFile(String fileName) {
 
         try {
+            File currentFile = new File(fileName);
+            sizeOfFile = (int)currentFile.length();
+            remainingBytes = sizeOfFile;
+
             byte[] partOfFile = openFile(fileName, 0);
 
             datagramSocket = new DatagramSocket();
@@ -72,6 +78,8 @@ public class Client{
                 byte[] data = receiveDatagramPacket.getData();
                 if((data[1]==4) && data[3] == 0){
                     System.out.println("Fonctionne" + receiveDatagramPacket.getData().toString());
+                    String message = new String(receiveDatagramPacket.getData(),"ASCII");
+                    System.out.println(message);
                 }
                 else {
                     String message = new String(receiveDatagramPacket.getData(),"ASCII");
@@ -125,10 +133,8 @@ public class Client{
         }
     }
 
+    // Returns the 512 bytes of the file after the offset in parameter
     private static byte[] openFile(String fileName, int offset) {
-        File currentFile = new File(fileName);
-        sizeOfFile = (int)currentFile.length();
-        remainingBytes = sizeOfFile;
         InputStream is;
         byte[] partOfFile = null;
         if(remainingBytes>=512){
@@ -140,7 +146,7 @@ public class Client{
 
         try {
             is = new FileInputStream(fileName);
-            is.read(partOfFile, offset, 512);
+            is.read(partOfFile, offset, DATA_SIZE);
             System.out.println(Arrays.toString(partOfFile));
 
         } catch (FileNotFoundException e) {
