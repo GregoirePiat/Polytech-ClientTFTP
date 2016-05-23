@@ -54,7 +54,7 @@ public class Client{
     public void prepareSendFile(String fileName) {
 
         try {
-            //byte[] partOfFile = openFile(fileName, 0);
+            byte[] partOfFile = openFile(fileName, 0);
 
             datagramSocket = new DatagramSocket();
             receiveDatagramPacket = new DatagramPacket(new byte[516],516);
@@ -125,9 +125,10 @@ public class Client{
         }
     }
 
-    private static byte[] openFile(String file, int offset) {
-        File currentFile = new File("/Users/GregoirePiat/Documents/test.docx");
+    private static byte[] openFile(String fileName, int offset) {
+        File currentFile = new File(fileName);
         sizeOfFile = (int)currentFile.length();
+        remainingBytes = sizeOfFile;
         InputStream is;
         byte[] partOfFile = null;
         if(remainingBytes>=512){
@@ -138,7 +139,7 @@ public class Client{
         }
 
         try {
-            is = new FileInputStream(file);
+            is = new FileInputStream(fileName);
             is.read(partOfFile, offset, 512);
             System.out.println(Arrays.toString(partOfFile));
 
