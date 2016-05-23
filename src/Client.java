@@ -25,16 +25,23 @@ public class Client{
     private static final byte OP_DATA = 3;
     private static final byte OP_ACK = 4;
     private static final byte OP_ERROR = 5;
+    private static final String MODE = "octet";
 
     // Taille max des paquets
     private final static int PACKET_SIZE = 516;
 
     private DatagramSocket datagramSocket = null;
+    private DatagramSocket datagramSocketReception = null;
     private InetAddress inetAddress = null;
     private byte[] requestByteArray;
     private byte[] bufferByteArray;
     private DatagramPacket sendDatagramPacket;
     private DatagramPacket receiveDatagramPacket;
+
+    public static int sizeOfFile;
+    public static int remainingBytes;
+    public static int currentNumPacket;
+    private boolean isRunning;
 
     public Client(String ip){
         try {
@@ -47,10 +54,11 @@ public class Client{
     public void prepareSendFile(String fileName) {
 
         try {
-            openFile(fileName, 0);
+            //byte[] partOfFile = openFile(fileName, 0);
 
             datagramSocket = new DatagramSocket();
-            requestByteArray = createRequest(OP_WRQ, fileName, "octet");
+            receiveDatagramPacket = new DatagramPacket(new byte[516],516);
+            requestByteArray = createRequest(OP_WRQ, fileName, MODE);
 
             sendDatagramPacket = new DatagramPacket(requestByteArray,
                     requestByteArray.length, inetAddress, SERVER_PORT);
@@ -60,11 +68,22 @@ public class Client{
             datagramSocket.send(sendDatagramPacket);
 
             // STEP 2: receive ACK from TFTP server
-            while(!waitServerResponse()) {
+            datagramSocket.receive(receiveDatagramPacket);
+                byte[] data = receiveDatagramPacket.getData();
+                if((data[1]==4) && data[3] == 0){
+                    System.out.println("Fonctionne" + receiveDatagramPacket.getData().toString());
+                }
+                else {
 
-                // STEP 3: send file to the server
-                sendFile(fileName);
-            }
+                    String message = new String(receiveDatagramPacket.getData(),"ASCII");
+                    System.out.println("Fonctionne pas ...");
+                    System.out.println(message);
+                }
+
+
+            //while(!waitServerResponse()) {
+                //sendFile(fileName);
+            //}
         } catch (SocketException ex) {
             ex.printStackTrace();
         } catch (IOException ex) {
@@ -94,18 +113,30 @@ public class Client{
     }
 
     private void sendFile(String fileName) {
-        int n = 0;
+        int bloc = 0;
+        int numOctet = 0;
         boolean over = false;
 
         while(!over) {
-            openFile(fileName, n);
-            n++;
+            byte[] partOfFile = openFile(fileName, numOctet);
+
+            createRequest(OP_DATA,fileName,MODE);
+            bloc++;
+            numOctet+=512;
         }
     }
 
     private static byte[] openFile(String file, int offset) {
+        File currentFile = new File("/Users/GregoirePiat/Documents/test.docx");
+        sizeOfFile = (int)currentFile.length();
         InputStream is;
-        byte[] partOfFile = new byte[516];
+        byte[] partOfFile = null;
+        if(remainingBytes>=512){
+            partOfFile = new byte[516];
+        }
+        else{
+            partOfFile = new byte[remainingBytes + 4];
+        }
 
         try {
             is = new FileInputStream(file);
@@ -113,10 +144,8 @@ public class Client{
             System.out.println(Arrays.toString(partOfFile));
 
         } catch (FileNotFoundException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         } catch (IOException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
 

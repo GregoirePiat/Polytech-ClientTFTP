@@ -6,8 +6,9 @@
 public class Main {
 
     public static void main (String [] arg) {
-        Client client = new Client("127.0.0.1", 69);
-        client.prepareSendFile("C:\\Users\\Nicolas\\Desktop\\Film.txt");
+        Client client = new Client("127.0.0.1");
+        //client.prepareSendFile("C:\\Users\\Nicolas\\Desktop\\Film.txt");
+        client.prepareSendFile("/Users/GregoirePiat/Documents/test.docx");
     }
 
 }
