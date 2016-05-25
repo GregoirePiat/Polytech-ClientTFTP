@@ -60,7 +60,7 @@ public class Client{
             sizeOfFile = (int)currentFile.length();
             remainingBytes = sizeOfFile;
 
-            byte[] partOfFile = openFile(fileName, 0);
+            //byte[] partOfFile = openFile(fileName, 0);
 
             datagramSocket = new DatagramSocket();
             receiveDatagramPacket = new DatagramPacket(new byte[516],516);
@@ -68,7 +68,6 @@ public class Client{
 
             sendDatagramPacket = new DatagramPacket(requestByteArray,
                     requestByteArray.length, inetAddress, SERVER_PORT);
-
 
             // STEP 1: sending request WRQ to TFTP server
             datagramSocket.send(sendDatagramPacket);
@@ -80,6 +79,9 @@ public class Client{
                     System.out.println("Fonctionne" + receiveDatagramPacket.getData().toString());
                     String message = new String(receiveDatagramPacket.getData(),"ASCII");
                     System.out.println(message);
+
+                    sendFile(fileName);
+                    //createRequest(OP_DATA,fileName,MODE);
                 }
                 else {
                     String message = new String(receiveDatagramPacket.getData(),"ASCII");
@@ -120,16 +122,11 @@ public class Client{
     }
 
     private void sendFile(String fileName) {
-        int bloc = 0;
-        int numOctet = 0;
-        boolean over = false;
-
-        while(!over) {
-            byte[] partOfFile = openFile(fileName, numOctet);
-
-            createRequest(OP_DATA,fileName,MODE);
-            bloc++;
-            numOctet+=512;
+        byte[] nextPartOfFile = new byte[512];
+        while(remainingBytes>0) {
+            nextPartOfFile = openFile(fileName, sizeOfFile-(sizeOfFile-remainingBytes));
+            sendPartOfFile(nextPartOfFile);
+            remainingBytes-=512;
         }
     }
 
@@ -145,9 +142,17 @@ public class Client{
         }
 
         try {
-            is = new FileInputStream(fileName);
-            is.read(partOfFile, offset, DATA_SIZE);
-            System.out.println(Arrays.toString(partOfFile));
+            if(remainingBytes>=512){
+                is = new FileInputStream(fileName);
+                is.read(partOfFile, offset, DATA_SIZE);
+                System.out.println(Arrays.toString(partOfFile));
+            }
+            else{
+                is = new FileInputStream(fileName);
+                is.read(partOfFile, offset, remainingBytes);
+                System.out.println(Arrays.toString(partOfFile));
+            }
+
 
         } catch (FileNotFoundException e) {
             e.printStackTrace();
@@ -180,6 +185,11 @@ public class Client{
         }
         rrqByteArray[position] = zeroByte;
         return rrqByteArray;
+    }
+
+    private void sendPartOfFile(byte[] partOfFile) {
+        DatagramPacket dpAck = new DatagramPacket(partOfFile, partOfFile.length, inetAddress,
+                receiveDatagramPacket.getPort());
     }
 
     public void sendAck(byte[] blockNumber) {
