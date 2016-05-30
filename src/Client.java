@@ -3,11 +3,14 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
+import com.sun.org.apache.xml.internal.utils.SystemIDResolver;
 import com.sun.xml.internal.fastinfoset.sax.SystemIdResolver;
 import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
+import jdk.nashorn.internal.runtime.regexp.joni.constants.OPCode;
 
 import java.io.*;
 import java.net.*;
+import java.nio.ByteBuffer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.net.DatagramPacket;
@@ -82,6 +85,7 @@ public class Client{
                     System.out.println("Fonctionne" + receiveDatagramPacket.getData().toString());
                     String message = new String(receiveDatagramPacket.getData(),"ASCII");
                     System.out.println(message);
+                    //datagramSocket = new DatagramSocket(receiveDatagramPacket.getPort());
                     sendFile(fileName);
                 }
                 else {
@@ -124,8 +128,14 @@ public class Client{
         while(remainingBytes>0) {
             nextPartOfFile = openFile(fileName, sentBytes);
             sendPartOfFile(nextPartOfFile, numBloc);
-            remainingBytes-=512;
-            sentBytes+=512;
+            // ATTENDRE REPONSE`
+            try{
+                Thread.sleep(1000);
+            }catch(Exception excep){
+                excep.printStackTrace();
+            }
+            waitServerResponse();
+            //sendPartOfFile(nextPartOfFile, numBloc);
             numBloc ++;
         }
     }
@@ -135,23 +145,21 @@ public class Client{
         InputStream is;
         byte[] partOfFile = null;
         if(remainingBytes>=(512)){
-            partOfFile = new byte[516];
+            partOfFile = new byte[512];
         }
         else{
-            partOfFile = new byte[remainingBytes + 4];
+            partOfFile = new byte[remainingBytes];
         }
 
         try {
-            if(remainingBytes>=(512)){
+            while(remainingBytes>=512){
                 is = new FileInputStream(fileName);
-                is.read(partOfFile, offset, DATA_SIZE); // est-ce que offset décale bien la lecture, et ne rajoute pas ce qu'il y a avant dans le tableau ?
-                // Sachant qu'avec un tab de size 100000 on a un indexoutofbound exception ...
+                is.read(partOfFile, 0, DATA_SIZE);
                 System.out.println(Arrays.toString(partOfFile));
-            }
-            else{
-                is = new FileInputStream(fileName);
-                is.read(partOfFile, offset, remainingBytes);
-                System.out.println(Arrays.toString(partOfFile));
+                remainingBytes -= 512;
+                sentBytes+=512;
+                System.out.println("Reste : "+remainingBytes);
+                System.out.println("Envoyée" +sentBytes);
             }
         } catch (FileNotFoundException e) {
             e.printStackTrace();
@@ -187,8 +195,33 @@ public class Client{
     }
 
     private void sendPartOfFile(byte[] partOfFile, int numBloc) {
-        DatagramPacket dpAck = new DatagramPacket(partOfFile, partOfFile.length, inetAddress,
+        byte[] datas = createRequest(OP_DATA, numBloc, partOfFile);
+        System.out.println(Arrays.toString(datas));
+
+        DatagramPacket dpData = new DatagramPacket(datas, datas.length, inetAddress,
                 receiveDatagramPacket.getPort());
+        try{
+            datagramSocket.send(dpData);
+        }catch(Exception exc){
+            exc.getStackTrace();
+        }
+    }
+
+    private byte[] createRequest(byte opCode, int numBloc, byte[] datas) {
+        byte[] beginRequest = {0,opCode};
+
+        byte[] blockNumber = new byte[4];
+        blockNumber = ByteBuffer.allocate(4).putInt(numBloc).array();
+        byte[] endRequest = new byte[blockNumber.length + datas.length];
+        System.arraycopy(blockNumber, 0, endRequest, 0, blockNumber.length);
+        System.arraycopy(datas, 0, endRequest, blockNumber.length, datas.length);
+
+        byte[] request = new byte[beginRequest.length + endRequest.length];
+        System.arraycopy(beginRequest, 0, request, 0, beginRequest.length);
+        System.arraycopy(endRequest, 0, request, beginRequest.length, endRequest.length);
+        System.out.println("OPCODE : "+opCode);
+        return request;
+
     }
 
     public void sendAck(byte[] blockNumber) {
