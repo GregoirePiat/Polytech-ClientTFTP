@@ -5,6 +5,7 @@
  */
 import com.sun.org.apache.xml.internal.utils.SystemIDResolver;
 import com.sun.xml.internal.fastinfoset.sax.SystemIdResolver;
+import com.sun.xml.internal.ws.api.message.stream.InputStreamMessage;
 import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
 import jdk.nashorn.internal.runtime.regexp.joni.constants.OPCode;
 
@@ -42,6 +43,7 @@ public class Client{
     private byte[] bufferByteArray;
     private DatagramPacket sendDatagramPacket;
     private DatagramPacket receiveDatagramPacket;
+    public static InputStream is;
 
     public static int sizeOfFile;
     public static int remainingBytes;
@@ -52,6 +54,7 @@ public class Client{
     public Client(String ip){
         try {
             inetAddress = InetAddress.getByName(ip);
+            is = null;
         } catch (UnknownHostException ex) {
             ex.printStackTrace();
         }
@@ -125,15 +128,16 @@ public class Client{
         byte[] nextPartOfFile = new byte[512];
         int numBloc = 0;
         sentBytes = 0;
+        try {
+            is = new FileInputStream(fileName);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
         while(remainingBytes>0) {
             nextPartOfFile = openFile(fileName, sentBytes);
             sendPartOfFile(nextPartOfFile, numBloc);
             // ATTENDRE REPONSE`
-            try{
-                Thread.sleep(1000);
-            }catch(Exception excep){
-                excep.printStackTrace();
-            }
+
             waitServerResponse();
             //sendPartOfFile(nextPartOfFile, numBloc);
             numBloc ++;
@@ -142,7 +146,6 @@ public class Client{
 
     // Returns the 512 bytes of the file after the offset in parameter
     private static byte[] openFile(String fileName, int offset) {
-        InputStream is;
         byte[] partOfFile = null;
         if(remainingBytes>=(512)){
             partOfFile = new byte[512];
@@ -152,15 +155,20 @@ public class Client{
         }
 
         try {
-            while(remainingBytes>=512){
-                is = new FileInputStream(fileName);
+            if(remainingBytes>=512) {
                 is.read(partOfFile, 0, DATA_SIZE);
                 System.out.println(Arrays.toString(partOfFile));
                 remainingBytes -= 512;
-                sentBytes+=512;
+                sentBytes += 512;
+            }
+            else{
+                is.read(partOfFile, 0, remainingBytes);
+                System.out.println(Arrays.toString(partOfFile));
+                remainingBytes -= remainingBytes;
+                sentBytes += remainingBytes;
+            }
                 System.out.println("Reste : "+remainingBytes);
                 System.out.println("Envoyée" +sentBytes);
-            }
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (IOException e) {
