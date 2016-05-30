@@ -64,6 +64,7 @@ public class Client{
         try {
             File currentFile = new File(fileName);
             sizeOfFile = (int)currentFile.length(); // en octets
+            System.out.println("Taille du fichier : "+sizeOfFile);
             System.out.println("String : -- "+ currentFile.toString());
             System.out.println("Total space : -- "+ currentFile.getTotalSpace());
             System.out.println("Absolute path: -- "+ currentFile.getAbsolutePath());
@@ -105,7 +106,7 @@ public class Client{
 
     private boolean waitServerResponse() {
         // prepare packet to receive
-        byte[] buffer = new byte[516]; // en octets
+        byte[] buffer = new byte[512]; // en octets
         DatagramPacket receivePacket = new DatagramPacket(buffer, buffer.length);
 
         try {
@@ -116,8 +117,7 @@ public class Client{
         }
 
         // Getting the first 4 characters (op_code) from the TFTP packet
-        byte[] opCode = { buffer[0], buffer[1] };
-
+        byte[] opCode = {buffer[0], buffer[1]};
         if (opCode[1] == OP_ACK) {
             return true;
         }
@@ -126,21 +126,33 @@ public class Client{
 
     private void sendFile(String fileName) {
         byte[] nextPartOfFile = new byte[512];
-        int numBloc = 0;
+        int numBloc = 1;
+        int nbBits = 0;
         sentBytes = 0;
         try {
             is = new FileInputStream(fileName);
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
-        while(remainingBytes>0) {
-            nextPartOfFile = openFile(fileName, sentBytes);
-            sendPartOfFile(nextPartOfFile, numBloc);
-            // ATTENDRE REPONSE`
+        while(sentBytes <= sizeOfFile) {
+            //nextPartOfFile = openFile(fileName, sentBytes);
 
+            try {
+                nbBits = is.read(nextPartOfFile, 0, DATA_SIZE);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            sendPartOfFile(nextPartOfFile, numBloc, nbBits);
+            // ATTENDRE REPONSE`
+            /*   try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }*/
             waitServerResponse();
             //sendPartOfFile(nextPartOfFile, numBloc);
             numBloc ++;
+            sentBytes += nbBits;
         }
     }
 
@@ -202,8 +214,8 @@ public class Client{
         return rrqByteArray;
     }
 
-    private void sendPartOfFile(byte[] partOfFile, int numBloc) {
-        byte[] datas = createRequest(OP_DATA, numBloc, partOfFile);
+    private void sendPartOfFile(byte[] partOfFile, int numBloc, int nbRead) {
+        byte[] datas = createRequest(OP_DATA, numBloc, partOfFile, nbRead);
         System.out.println(Arrays.toString(datas));
 
         DatagramPacket dpData = new DatagramPacket(datas, datas.length, inetAddress,
@@ -215,8 +227,17 @@ public class Client{
         }
     }
 
-    private byte[] createRequest(byte opCode, int numBloc, byte[] datas) {
-        byte[] beginRequest = {0,opCode};
+    private byte[] createRequest(byte opCode, int numBloc, byte[] datas, int nbRead) {
+        byte[] blockNumber = ByteBuffer.allocate(4).putInt(numBloc).array();
+        byte[] request = new byte[4+nbRead];
+        request[0]= 0;
+        request[1]= OP_DATA;
+        request[2] = blockNumber[2];
+        request[3] = blockNumber[3];
+        for(int index = 0; index< nbRead; index ++){
+            request[4+index] = datas[index];
+        }
+        /*byte[] beginRequest = {0,opCode};
 
         byte[] blockNumber = new byte[4];
         blockNumber = ByteBuffer.allocate(4).putInt(numBloc).array();
@@ -227,7 +248,7 @@ public class Client{
         byte[] request = new byte[beginRequest.length + endRequest.length];
         System.arraycopy(beginRequest, 0, request, 0, beginRequest.length);
         System.arraycopy(endRequest, 0, request, beginRequest.length, endRequest.length);
-        System.out.println("OPCODE : "+opCode);
+        System.out.println("OPCODE : "+opCode);*/
         return request;
 
     }
