@@ -57,7 +57,7 @@ public class Client{
     public void prepareSendFile(String fileName) {
         try {
             File currentFile = new File(fileName);
-            sizeOfFile = (int)currentFile.length(); // en bits
+            sizeOfFile = (int)currentFile.length(); // en octets
             System.out.println("String : -- "+ currentFile.toString());
             System.out.println("Total space : -- "+ currentFile.getTotalSpace());
             System.out.println("Absolute path: -- "+ currentFile.getAbsolutePath());
@@ -98,7 +98,7 @@ public class Client{
 
     private boolean waitServerResponse() {
         // prepare packet to receive
-        byte[] buffer = new byte[516]; // en bits
+        byte[] buffer = new byte[516]; // en octets
         DatagramPacket receivePacket = new DatagramPacket(buffer, buffer.length);
 
         try {
