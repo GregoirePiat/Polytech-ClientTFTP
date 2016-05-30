@@ -42,6 +42,7 @@ public class Client{
 
     public static int sizeOfFile;
     public static int remainingBytes;
+    public static int sentBytes;
     public static int currentNumPacket;
     private boolean isRunning;
 
@@ -54,11 +55,13 @@ public class Client{
     }
 
     public void prepareSendFile(String fileName) {
-
         try {
             File currentFile = new File(fileName);
-            sizeOfFile = (int)currentFile.length();
-            remainingBytes = sizeOfFile;
+            sizeOfFile = (int)currentFile.length(); // en bits
+            System.out.println("String : -- "+ currentFile.toString());
+            System.out.println("Total space : -- "+ currentFile.getTotalSpace());
+            System.out.println("Absolute path: -- "+ currentFile.getAbsolutePath());
+            remainingBytes = sizeOfFile; // en bits
 
             //byte[] partOfFile = openFile(fileName, 0);
 
@@ -79,20 +82,13 @@ public class Client{
                     System.out.println("Fonctionne" + receiveDatagramPacket.getData().toString());
                     String message = new String(receiveDatagramPacket.getData(),"ASCII");
                     System.out.println(message);
-
                     sendFile(fileName);
-                    //createRequest(OP_DATA,fileName,MODE);
                 }
                 else {
                     String message = new String(receiveDatagramPacket.getData(),"ASCII");
                     System.out.println("Fonctionne pas ..." + fileName);
                     System.out.println(message);
                 }
-
-
-            //while(!waitServerResponse()) {
-                //sendFile(fileName);
-            //}
         } catch (SocketException ex) {
             ex.printStackTrace();
         } catch (IOException ex) {
@@ -102,7 +98,7 @@ public class Client{
 
     private boolean waitServerResponse() {
         // prepare packet to receive
-        byte[] buffer = new byte[516];
+        byte[] buffer = new byte[516]; // en bits
         DatagramPacket receivePacket = new DatagramPacket(buffer, buffer.length);
 
         try {
@@ -123,10 +119,14 @@ public class Client{
 
     private void sendFile(String fileName) {
         byte[] nextPartOfFile = new byte[512];
+        int numBloc = 0;
+        sentBytes = 0;
         while(remainingBytes>0) {
-            nextPartOfFile = openFile(fileName, sizeOfFile-(sizeOfFile-remainingBytes));
-            sendPartOfFile(nextPartOfFile);
+            nextPartOfFile = openFile(fileName, sentBytes);
+            sendPartOfFile(nextPartOfFile, numBloc);
             remainingBytes-=512;
+            sentBytes+=512;
+            numBloc ++;
         }
     }
 
@@ -134,7 +134,7 @@ public class Client{
     private static byte[] openFile(String fileName, int offset) {
         InputStream is;
         byte[] partOfFile = null;
-        if(remainingBytes>=512){
+        if(remainingBytes>=(512)){
             partOfFile = new byte[516];
         }
         else{
@@ -142,9 +142,10 @@ public class Client{
         }
 
         try {
-            if(remainingBytes>=512){
+            if(remainingBytes>=(512)){
                 is = new FileInputStream(fileName);
-                is.read(partOfFile, offset, DATA_SIZE);
+                is.read(partOfFile, offset, DATA_SIZE); // est-ce que offset décale bien la lecture, et ne rajoute pas ce qu'il y a avant dans le tableau ?
+                // Sachant qu'avec un tab de size 100000 on a un indexoutofbound exception ...
                 System.out.println(Arrays.toString(partOfFile));
             }
             else{
@@ -152,8 +153,6 @@ public class Client{
                 is.read(partOfFile, offset, remainingBytes);
                 System.out.println(Arrays.toString(partOfFile));
             }
-
-
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (IOException e) {
@@ -187,7 +186,7 @@ public class Client{
         return rrqByteArray;
     }
 
-    private void sendPartOfFile(byte[] partOfFile) {
+    private void sendPartOfFile(byte[] partOfFile, int numBloc) {
         DatagramPacket dpAck = new DatagramPacket(partOfFile, partOfFile.length, inetAddress,
                 receiveDatagramPacket.getPort());
     }
