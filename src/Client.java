@@ -73,8 +73,6 @@ public class Client {
             System.out.println("Absolute path: -- "+ currentFile.getAbsolutePath());
             remainingBytes = sizeOfFile; // en bits
 
-            //byte[] partOfFile = openFile(fileName, 0);
-
             datagramSocket = new DatagramSocket();
             receiveDatagramPacket = new DatagramPacket(new byte[516],516);
             requestByteArray = createRequest(OP_WRQ, fileName, MODE);
@@ -142,8 +140,6 @@ public class Client {
             e.printStackTrace();
         }
         while(sentBytes < sizeOfFile) {
-            //nextPartOfFile = openFile(fileName, sentBytes);
-
             try {
                 nbBits = is.read(nextPartOfFile, 0, DATA_SIZE);
             } catch (IOException e) {
@@ -156,40 +152,6 @@ public class Client {
             numBloc++;
             sentBytes += nbBits;
         }
-    }
-
-    // Returns the 512 bytes of the file after the offset in parameter
-    private static byte[] openFile(String fileName, int offset) {
-        byte[] partOfFile = null;
-        if(remainingBytes>=(512)){
-            partOfFile = new byte[512];
-        }
-        else{
-            partOfFile = new byte[remainingBytes];
-        }
-
-        try {
-            if(remainingBytes>=512) {
-                is.read(partOfFile, 0, DATA_SIZE);
-                System.out.println(Arrays.toString(partOfFile));
-                remainingBytes -= 512;
-                sentBytes += 512;
-            }
-            else{
-                is.read(partOfFile, 0, remainingBytes);
-                System.out.println(Arrays.toString(partOfFile));
-                remainingBytes -= remainingBytes;
-                sentBytes += remainingBytes;
-            }
-                System.out.println("Reste : "+remainingBytes);
-                System.out.println("Envoyée" +sentBytes);
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return partOfFile;
     }
 
     private byte[] createRequest(byte opCode, String fileName, String mode) {
@@ -239,18 +201,7 @@ public class Client {
         for(int index = 0; index< nbRead; index ++){
             request[4+index] = datas[index];
         }
-        /*byte[] beginRequest = {0,opCode};
-
-        byte[] blockNumber = new byte[4];
-        blockNumber = ByteBuffer.allocate(4).putInt(numBloc).array();
-        byte[] endRequest = new byte[blockNumber.length + datas.length];
-        System.arraycopy(blockNumber, 0, endRequest, 0, blockNumber.length);
-        System.arraycopy(datas, 0, endRequest, blockNumber.length, datas.length);
-
-        byte[] request = new byte[beginRequest.length + endRequest.length];
-        System.arraycopy(beginRequest, 0, request, 0, beginRequest.length);
-        System.arraycopy(endRequest, 0, request, beginRequest.length, endRequest.length);
-        System.out.println("OPCODE : "+opCode);*/
+		
         return request;
 
     }
