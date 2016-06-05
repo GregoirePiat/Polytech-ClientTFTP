@@ -1,3 +1,5 @@
+package src;
+
 /*
  * To change this license header, choose License Headers in Project Properties.
  * To change this template file, choose Tools | Templates
@@ -20,7 +22,7 @@ import java.net.InetAddress;
 import java.nio.file.*;
 import java.util.Arrays;
 
-public class Client{
+public class Client {
 
     private static final int SERVER_PORT = 69;
 
@@ -60,7 +62,8 @@ public class Client{
         }
     }
 
-    public void prepareSendFile(String fileName) {
+    public int prepareSendFile(String fileName) {
+        int crem = 0;
         try {
             File currentFile = new File(fileName);
             sizeOfFile = (int)currentFile.length(); // en octets
@@ -98,10 +101,14 @@ public class Client{
                     System.out.println(message);
                 }
         } catch (SocketException ex) {
+            crem = 1;
             ex.printStackTrace();
         } catch (IOException ex) {
+            crem = -1;
             ex.printStackTrace();
         }
+        
+        return crem;
     }
 
     private boolean waitServerResponse() {
@@ -134,7 +141,7 @@ public class Client{
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
-        while(sentBytes <= sizeOfFile) {
+        while(sentBytes < sizeOfFile) {
             //nextPartOfFile = openFile(fileName, sentBytes);
 
             try {
@@ -143,15 +150,10 @@ public class Client{
                 e.printStackTrace();
             }
             sendPartOfFile(nextPartOfFile, numBloc, nbBits);
-            // ATTENDRE REPONSE`
-            /*   try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }*/
+            // ATTENDRE REPONSE serveur
             waitServerResponse();
             //sendPartOfFile(nextPartOfFile, numBloc);
-            numBloc ++;
+            numBloc++;
             sentBytes += nbBits;
         }
     }
